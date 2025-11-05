@@ -9,7 +9,8 @@ const StarIcon = ({ className }: { className: string }) => (
 
 // FIX: Moved `ControlButton` outside of the `App` component to prevent it from being redeclared on every render. This fixes the generic type inference issues and improves performance.
 // FIX: Corrected the 'setter' prop type to `React.Dispatch<React.SetStateAction<T>>`. The previous, more generic type was causing TypeScript to fail at inferring the component's generic type, leading to errors.
-function ControlButton<T>({ value, label, current, setter }: { value: T, label: React.ReactNode, current: T, setter: React.Dispatch<React.SetStateAction<T>> }) {
+// FIX: Added a constraint to the generic type T to help TypeScript correctly identify ControlButton as a React component and resolve its generic props.
+function ControlButton<T extends string>({ value, label, current, setter }: { value: T, label: React.ReactNode, current: T, setter: React.Dispatch<React.SetStateAction<T>> }) {
   return (
     <button
       onClick={() => setter(value)}
@@ -25,7 +26,7 @@ const App: React.FC = () => {
   const [secretWordInput, setSecretWordInput] = useState<string>('');
   const [authError, setAuthError] = useState<string>('');
   const [isAuthShaking, setIsAuthShaking] = useState<boolean>(false);
-  const SECRET_WORD = 'MATHWIZ';
+  const SECRET_WORD = 'MAHLIYOINFORMATIK';
 
   const [operation, setOperation] = useState<Operation>(Operation.Add);
   const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.Easy);
@@ -271,7 +272,7 @@ const App: React.FC = () => {
             />
             <button
               type="submit"
-              className="w-full md:w-3/4 bg-blue-500 hover:bg-blue-600 text-white font-bold text-xl py-3 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-300"
+              className="w-full md:w-3/á bg-blue-500 hover:bg-blue-600 text-white font-bold text-xl py-3 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-300"
             >
               Kirish
             </button>
