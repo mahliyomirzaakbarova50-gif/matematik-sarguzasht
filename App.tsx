@@ -21,6 +21,12 @@ function ControlButton<T>({ value, label, current, setter }: { value: T, label: 
 }
 
 const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [secretWordInput, setSecretWordInput] = useState<string>('');
+  const [authError, setAuthError] = useState<string>('');
+  const [isAuthShaking, setIsAuthShaking] = useState<boolean>(false);
+  const SECRET_WORD = 'MATHWIZ';
+
   const [operation, setOperation] = useState<Operation>(Operation.Add);
   const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.Easy);
   const [problem, setProblem] = useState<Problem | null>(null);
@@ -37,6 +43,18 @@ const App: React.FC = () => {
   const correctAnswerSound = useMemo(() => new Audio('https://pixabay.com/sound-effects/success-1-6297.mp3'), []);
   const incorrectAnswerSound = useMemo(() => new Audio('https://pixabay.com/sound-effects/negative_beeps-6008.mp3'), []);
 
+  const handleAuthSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (secretWordInput.toUpperCase() === SECRET_WORD) {
+      setIsAuthenticated(true);
+      setAuthError('');
+    } else {
+      setAuthError('Mahfiy soʻz notoʻgʻri. Qaytadan urinib koʻring.');
+      setIsAuthShaking(true);
+      setTimeout(() => setIsAuthShaking(false), 500);
+    }
+  };
+  
   const generateProblem = useCallback(() => {
     let num1: number, num2: number, answer: number;
 
@@ -84,10 +102,10 @@ const App: React.FC = () => {
   }, [operation, difficulty]);
 
   useEffect(() => {
-    if (gameState === 'playing') {
+    if (isAuthenticated && gameState === 'playing') {
       generateProblem();
     }
-  }, [generateProblem, gameState]);
+  }, [generateProblem, gameState, isAuthenticated]);
 
   const handleRestart = () => {
     setScore(0);
@@ -129,9 +147,9 @@ const App: React.FC = () => {
   const feedbackColor = feedback === 'correct' ? 'text-green-500' : 'text-red-500';
   const feedbackAnimation = feedback === 'correct' ? 'animate-pop-in' : feedback === 'incorrect' ? 'animate-shake' : '';
   
-  if (gameState === 'finished') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 font-sans text-slate-800 dark:text-slate-200 transition-colors duration-500">
+  const renderGame = () => {
+    if (gameState === 'finished') {
+      return (
         <div className="w-full max-w-md md:max-w-lg mx-auto bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 space-y-6 text-center animate-pop-in">
           <h1 className="text-3xl md:text-4xl font-extrabold text-slate-700 dark:text-slate-100">Oʻyin Tugadi!</h1>
           <p className="text-xl text-slate-600 dark:text-slate-300">Sizning yakuniy hisobingiz:</p>
@@ -146,91 +164,125 @@ const App: React.FC = () => {
             Qayta Boshlash
           </button>
         </div>
-      </div>
+      );
+    }
+
+    return (
+      <>
+        <div className="w-full max-w-md md:max-w-lg mx-auto bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 space-y-6">
+          <header className="text-center">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-slate-700 dark:text-slate-100">Matematika Sarguzashti</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">Bilimlaringizni sinab ko'ring!</p>
+          </header>
+
+          <div className="flex justify-around items-center bg-slate-100 dark:bg-slate-700/50 p-3 rounded-xl">
+            <div className="text-center">
+              <div className="text-sm font-bold text-purple-500 dark:text-purple-400">SAVOL</div>
+              <div className="text-2xl font-bold">{questionNumber}/{totalQuestions}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-sm font-bold text-blue-500 dark:text-blue-400">HISOB</div>
+              <div className="text-2xl font-bold">{score}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-sm font-bold text-yellow-500 dark:text-yellow-400">SERIYA</div>
+              <div className="text-2xl font-bold flex items-center justify-center">
+                {streak} {streak > 0 && <StarIcon className="w-6 h-6 ml-1 text-yellow-400" />}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-center mb-2 font-bold text-slate-600 dark:text-slate-300">Amalni tanlang</h3>
+              <div className="flex justify-center gap-2 md:gap-3">
+                {/* FIX: Explicitly set the generic type for ControlButton to resolve TypeScript inference issue. */}
+                {(Object.values(Operation) as Array<Operation>).map(op => (
+                  <ControlButton<Operation> key={op} value={op} label={op} current={operation} setter={setOperation} />
+                ))}
+              </div>
+            </div>
+            <div>
+              <h3 className="text-center mb-2 font-bold text-slate-600 dark:text-slate-300">Qiyinlik darajasi</h3>
+              <div className="flex justify-center gap-2 md:gap-3">
+                {/* FIX: Explicitly set the generic type for ControlButton to resolve TypeScript inference issue. */}
+                {(Object.values(Difficulty) as Array<Difficulty>).map(diff => (
+                  <ControlButton<Difficulty> key={diff} value={diff} label={diff} current={difficulty} setter={setDifficulty} />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-100 dark:bg-slate-900/50 rounded-xl p-6 min-h-[220px] md:min-h-[250px] flex flex-col justify-center items-center relative transition-all duration-300">
+            {problem && (
+              <div className={`text-5xl md:text-7xl font-bold text-slate-700 dark:text-slate-200 tracking-wider transition-opacity duration-500 ${isChecking ? 'opacity-20' : 'opacity-100'}`}>
+                {problem.num1} {problem.operation} {problem.num2}
+              </div>
+            )}
+            
+            <div className={`absolute inset-0 flex justify-center items-center text-3xl font-bold ${feedbackColor} ${feedbackAnimation}`}>
+                {feedback !== 'idle' && feedbackMessage}
+            </div>
+          </div>
+          
+          <form onSubmit={handleSubmit}>
+            <div className="flex flex-col items-center gap-4">
+              <input
+                  type="number"
+                  pattern="\d*"
+                  value={userAnswer}
+                  onChange={(e) => setUserAnswer(e.target.value)}
+                  disabled={isChecking}
+                  placeholder="Javob"
+                  className="w-full md:w-3/4 text-center text-3xl font-bold p-3 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-all"
+                  autoFocus
+                />
+              <button 
+                type="submit"
+                disabled={isChecking || userAnswer === ''}
+                className="w-full md:w-3/4 bg-green-500 hover:bg-green-600 disabled:bg-slate-400 disabled:dark:bg-slate-600 disabled:cursor-not-allowed text-white font-bold text-xl py-3 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-300"
+              >
+                Tekshirish
+              </button>
+            </div>
+          </form>
+        </div>
+        <footer className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
+          <p>Bolalar uchun sevgi bilan yaratilgan.</p>
+        </footer>
+      </>
     );
   }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 font-sans text-slate-800 dark:text-slate-200 transition-colors duration-500">
-      <div className="w-full max-w-md md:max-w-lg mx-auto bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 space-y-6">
-        <header className="text-center">
-          <h1 className="text-3xl md:text-4xl font-extrabold text-slate-700 dark:text-slate-100">Matematika Sarguzashti</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Bilimlaringizni sinab ko'ring!</p>
-        </header>
-
-        <div className="flex justify-around items-center bg-slate-100 dark:bg-slate-700/50 p-3 rounded-xl">
-           <div className="text-center">
-            <div className="text-sm font-bold text-purple-500 dark:text-purple-400">SAVOL</div>
-            <div className="text-2xl font-bold">{questionNumber}/{totalQuestions}</div>
-          </div>
-          <div className="text-center">
-            <div className="text-sm font-bold text-blue-500 dark:text-blue-400">HISOB</div>
-            <div className="text-2xl font-bold">{score}</div>
-          </div>
-          <div className="text-center">
-            <div className="text-sm font-bold text-yellow-500 dark:text-yellow-400">SERIYA</div>
-            <div className="text-2xl font-bold flex items-center justify-center">
-              {streak} {streak > 0 && <StarIcon className="w-6 h-6 ml-1 text-yellow-400" />}
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-center mb-2 font-bold text-slate-600 dark:text-slate-300">Amalni tanlang</h3>
-            <div className="flex justify-center gap-2 md:gap-3">
-              {(Object.values(Operation) as Array<Operation>).map(op => (
-                <ControlButton key={op} value={op} label={op} current={operation} setter={setOperation} />
-              ))}
-            </div>
-          </div>
-          <div>
-            <h3 className="text-center mb-2 font-bold text-slate-600 dark:text-slate-300">Qiyinlik darajasi</h3>
-            <div className="flex justify-center gap-2 md:gap-3">
-              {(Object.values(Difficulty) as Array<Difficulty>).map(diff => (
-                <ControlButton key={diff} value={diff} label={diff} current={difficulty} setter={setDifficulty} />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-slate-100 dark:bg-slate-900/50 rounded-xl p-6 min-h-[220px] md:min-h-[250px] flex flex-col justify-center items-center relative transition-all duration-300">
-          {problem && (
-            <div className={`text-5xl md:text-7xl font-bold text-slate-700 dark:text-slate-200 tracking-wider transition-opacity duration-500 ${isChecking ? 'opacity-20' : 'opacity-100'}`}>
-              {problem.num1} {problem.operation} {problem.num2}
-            </div>
-          )}
-          
-          <div className={`absolute inset-0 flex justify-center items-center text-3xl font-bold ${feedbackColor} ${feedbackAnimation}`}>
-              {feedback !== 'idle' && feedbackMessage}
-          </div>
-        </div>
-        
-        <form onSubmit={handleSubmit}>
-          <div className="flex flex-col items-center gap-4">
-             <input
-                type="number"
-                pattern="\d*"
-                value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
-                disabled={isChecking}
-                placeholder="Javob"
-                className="w-full md:w-3/4 text-center text-3xl font-bold p-3 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-all"
-                autoFocus
-              />
-            <button 
+      {!isAuthenticated ? (
+        <div className="w-full max-w-md mx-auto bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 space-y-6 text-center animate-pop-in">
+          <h1 className="text-3xl md:text-4xl font-extrabold text-slate-700 dark:text-slate-100">Xush kelibsiz!</h1>
+          <p className="text-slate-600 dark:text-slate-300">Ilovani ishga tushirish uchun mahfiy so'zni kiriting.</p>
+          <form onSubmit={handleAuthSubmit} className={`flex flex-col items-center gap-4 ${isAuthShaking ? 'animate-shake' : ''}`}>
+            <input
+              type="password"
+              value={secretWordInput}
+              onChange={(e) => setSecretWordInput(e.target.value)}
+              placeholder="Mahfiy so'z"
+              className="w-full md:w-3/4 text-center text-xl p-3 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              autoFocus
+            />
+            <button
               type="submit"
-              disabled={isChecking || userAnswer === ''}
-              className="w-full md:w-3/4 bg-green-500 hover:bg-green-600 disabled:bg-slate-400 disabled:dark:bg-slate-600 disabled:cursor-not-allowed text-white font-bold text-xl py-3 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-300"
+              className="w-full md:w-3/4 bg-blue-500 hover:bg-blue-600 text-white font-bold text-xl py-3 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-300"
             >
-              Tekshirish
+              Kirish
             </button>
-          </div>
-        </form>
-      </div>
-       <footer className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
-        <p>Bolalar uchun sevgi bilan yaratilgan.</p>
-      </footer>
+          </form>
+          {authError && (
+            <p className="text-red-500 font-bold mt-4">{authError}</p>
+          )}
+        </div>
+      ) : (
+        renderGame()
+      )}
     </div>
   );
 };
